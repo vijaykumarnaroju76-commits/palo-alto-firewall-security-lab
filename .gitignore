@@ -1,0 +1,44 @@
+# .gitignore
+
+# Palo Alto Specific
+*.xml
+*.conf
+*.backup
+*.swp
+support-files/
+logs/
+snapshots/
+
+# Credentials
+*.key
+*.pem
+*.pfx
+*.p12
+*.crt
+*.csr
+secrets/
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary
+*.tmp
+*.bak
+*~
+temp/
+
+# Virtual Environment
+venv/
+env/
+
