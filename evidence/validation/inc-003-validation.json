@@ -1,0 +1,38 @@
+{
+  "incident_id": "INC-003",
+  "title": "IPsec Phase 2 failure after crypto hardening change",
+  "synthetic_data": true,
+  "validated_at": "2026-08-16T10:20:00Z",
+  "checks": [
+    {
+      "name": "phase1_sa_up",
+      "command": "show vpn ike-sa gateway Partner-Site-Gateway",
+      "expected": "state = UP",
+      "result": "pass"
+    },
+    {
+      "name": "phase2_sa_up",
+      "command": "show vpn ipsec-sa",
+      "expected": "state = UP, non-zero local-spi/remote-spi",
+      "result": "pass"
+    },
+    {
+      "name": "no_further_no_proposal_chosen_events",
+      "command": "Monitor > Logs > System filter subtype eq vpn AND eventid eq ike-nego-p2-fail",
+      "expected": "0 new entries after cutover",
+      "result": "pass"
+    },
+    {
+      "name": "sustained_traffic_flow",
+      "command": "show vpn flow name Site-to-Site-Tunnel",
+      "expected": "encrypt/decrypt packet counters incrementing, 0 errors, 30 min soak",
+      "result": "pass",
+      "observed": {
+        "encrypt_pkts": 48213,
+        "decrypt_pkts": 47990,
+        "errors": 0
+      }
+    }
+  ],
+  "overall_result": "pass"
+}

@@ -1,0 +1,47 @@
+# INC-001 — sanitized evidence
+# Synthetic data for portfolio demonstration only. See ../README.md for the
+# IP-range convention used throughout this repository.
+
+## show session all filter destination 203.0.113.51 (pre-fix)
+
+session  proto  source          sport  dest             dport  nat-dest    nat-dport  application  state
+1091422  tcp    10.4.18.22      51231  203.0.113.51     443    10.0.2.10   443        ssl          ACTIVE
+1091430  tcp    10.4.9.7        49882  203.0.113.51     443    10.0.2.10   443        ssl          ACTIVE
+1091441  tcp    10.4.22.101     55210  203.0.113.51     443    10.0.2.10   443        ssl          ACTIVE
+
+# Every session destined for the new app's public IP (203.0.113.51) is
+# being NAT-translated to 10.0.2.10 (the LEGACY server), not 10.0.2.20
+# (the new app). Destination NAT is resolving to the wrong internal host.
+
+## show rule-hit-count rule-base nat vsys vsys1 (pre-fix)
+
+rule                              hit-count   last-hit
+Internet-to-WebServer-DNAT        184213      2026-08-12T09:14:02Z
+Internet-to-NewApp-DNAT           0           never
+
+## show nat-rule-base (pre-fix, relevant rules)
+
+rule 2: Internet-to-WebServer-DNAT
+  from untrust to dmz
+  destination: Public-IP-Pool (203.0.113.0/24)
+  translate destination -> 10.0.2.10:443
+
+rule 3: Internet-to-NewApp-DNAT
+  from untrust to dmz
+  destination: Public-IP-NewApp (203.0.113.51/32)
+  translate destination -> 10.0.2.20:443
+
+# 203.0.113.51 falls inside rule 2's /24 destination object, and rule 2
+# is evaluated first. Rule 3 is syntactically correct but unreachable.
+
+## show session all filter destination 203.0.113.51 (post-fix)
+
+session  proto  source          sport  dest             dport  nat-dest    nat-dport  application  state
+1093880  tcp    10.4.18.22      51344  203.0.113.51     443    10.0.2.20   443        ssl          ACTIVE
+1093891  tcp    10.4.9.7        49991  203.0.113.51     443    10.0.2.20   443        ssl          ACTIVE
+
+## show rule-hit-count rule-base nat vsys vsys1 (post-fix, 30 min later)
+
+rule                              hit-count   last-hit
+Internet-to-WebServer-DNAT        184213      2026-08-12T09:14:02Z   (unchanged — no longer matching new-app traffic)
+Internet-to-NewApp-DNAT           612         2026-08-12T10:02:47Z

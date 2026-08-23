@@ -1,0 +1,33 @@
+{
+  "incident_id": "INC-002",
+  "title": "Security policy deny / App-ID reclassification",
+  "synthetic_data": true,
+  "validated_at": "2026-08-14T14:35:00Z",
+  "checks": [
+    {
+      "name": "traffic_classified_as_custom_app",
+      "command": "Monitor > Logs > Traffic filter ( addr.dst in 10.0.2.30 )",
+      "expected": "application = inventory-api for all sessions",
+      "result": "pass"
+    },
+    {
+      "name": "no_policy_deny_entries",
+      "command": "Monitor > Logs > Traffic filter ( addr.dst in 10.0.2.30 ) AND ( action eq deny )",
+      "expected": "0 matching entries over 30 minute window",
+      "result": "pass"
+    },
+    {
+      "name": "rule_hit_count_full_coverage",
+      "command": "show rule-hit-count rule-base security vsys vsys1",
+      "expected": "Allow-Trust-to-Inventory-API accounts for 100% of sessions to 10.0.2.30",
+      "result": "pass"
+    },
+    {
+      "name": "application_team_confirmation",
+      "command": "manual confirmation from application owner",
+      "expected": "zero failed calls over 1 hour production traffic",
+      "result": "pass"
+    }
+  ],
+  "overall_result": "pass"
+}
