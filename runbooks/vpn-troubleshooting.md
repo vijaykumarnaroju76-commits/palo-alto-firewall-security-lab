@@ -1,236 +1,148 @@
-# VPN Troubleshooting Guide
+# IPsec VPN Troubleshooting Runbook
 
-## Issue: VPN Tunnel Not Establishing
+IPsec on PAN-OS negotiates in two independent stages — **Phase 1 (IKE SA)**
+and **Phase 2 (IPsec SA)** — governed by two separate crypto profiles. They
+fail for different reasons and the fix is different depending on which one
+is down. Conflating them is the single most common way VPN troubleshooting
+goes in circles.
 
-### Symptoms
-- VPN status shows "Down"
-- Phase 1 negotiation fails
-- Unable to ping remote subnet
-- VPN logs show connection errors
+| | Phase 1 (IKE) | Phase 2 (IPsec) |
+|---|---|---|
+| Establishes | The management channel between peers | The actual tunnel that carries data |
+| Governed by | IKE Crypto Profile | IPsec Crypto Profile |
+| Common failure | Pre-shared key / certificate mismatch, IKE proposal mismatch, peer unreachable | ESP transform (encryption/auth) mismatch, proxy-ID / traffic selector mismatch |
+| Check with | `show vpn ike-sa gateway <gateway>` | `show vpn ipsec-sa` |
 
-### Diagnosis Steps
+Symptom overlap is real: both present as "tunnel is down" to an end user.
+Always check Phase 1 and Phase 2 status **separately** before diagnosing
+further — a Phase 1 SA that's up rules out an entire category of causes
+(peer reachability, PSK, IKE proposal) and narrows the problem to Phase 2
+transform or selector mismatch, or vice versa.
 
-**Step 1: Check VPN Status**
+## Step 1: Establish which phase is actually failing
+
 ```
-Monitor > Logs > System
-Filter: vpn
-Show: last 50 entries
-```
-
-**Step 2: Verify Gateway Connectivity**
-```
-Device > Diagnostics > Ping
-Host: [Remote-VPN-Gateway-IP]
-Expected: Success
-```
-
-**Step 3: Check IKE Phase 1**
-```
-Monitor > VPN > IPSec > Gateways
-Look for:
-- Gateway Status: Up/Down
-- Phase 1 State: MM1, MM2, etc.
-- Last Error: [if any]
+> show vpn ike-sa gateway <gateway-name>
+> show vpn ipsec-sa
+> show vpn flow name <tunnel-name>
 ```
 
-**Step 4: Check IPSec Tunnel Status**
-```
-Monitor > VPN > IPSec > Tunnels
-Look for:
-- Tunnel State: Active/Down
-- Encrypt/Decrypt packets
-- Errors: [if any]
-```
+- Phase 1 down, Phase 2 never attempted → peer reachability, PSK/cert, or
+  IKE proposal problem. Continue at **Step 2**.
+- Phase 1 up, Phase 2 down or flapping → transform or proxy-ID mismatch on
+  the IPsec crypto profile or protected-subnet definitions. Continue at
+  **Step 3**. This is the [INC-003](../incident-command-center/INC-003-ipsec-phase2-failure.md)
+  pattern.
+- Both up but no traffic passes → not a VPN negotiation problem at all —
+  check NAT rule order (Step 4) and the security policy for the `vpn` zone.
 
-**Step 5: Review NAT Rules**
+## Step 2: Phase 1 (IKE) failure
+
 ```
-Policies > NAT > [All NAT Rules]
-Check:
-- Order of rules
-- Source/Dest addresses
-- Potential conflicts
+Monitor > Logs > System, filter: subtype eq vpn
+> debug ike stat
 ```
 
-### Root Cause: Incorrect NAT Rule Ordering
+Check, in order:
+1. **Reachability** — `ping` (via the correct source interface) to the
+   peer's public gateway IP. If this fails, it's routing/firewall/ISP, not
+   VPN configuration.
+2. **IKE proposal match** — encryption, hash, DH group, and IKE version
+   must match exactly on both peers. A single differing parameter causes a
+   silent proposal rejection, not a helpful error.
+3. **Pre-shared key or certificate** — confirm out of band with the peer
+   administrator; a mismatched PSK fails without a specific log line on
+   either side.
 
-**Problem:**
-NAT rules were positioned AFTER generic rules, causing VPN traffic to be NAT-translated before being evaluated for VPN bypass.
+## Step 3: Phase 2 (IPsec) failure — transform or proxy-ID mismatch
 
-**Impact:**
-- VPN packets modified by NAT
-- Tunnel negotiation fails
-- Remote gateway rejects packets
-- Tunnel stays down
-
-### Solution
-
-**Step 1: Create Bypass-NAT Rule**
 ```
-Policies > NAT > Add (at TOP of list)
-
-Name: VPN-Bypass-NAT
-From Zone: trust
-To Zone: untrust
-Source Address: [local-subnet]
-Destination Address: [remote-subnet]
-Service: any
-Translation Type: None (bypass)
-Move to position: 1
-Enable: yes
-Commit
+Monitor > Logs > System, filter: subtype eq vpn AND ( eventid eq ike-nego-p2-fail )
+> show vpn ipsec-sa tunnel <tunnel-name>
 ```
 
-**Step 2: Verify Rule Order**
+Look for `NO-PROPOSAL-CHOSEN` or `Quick Mode` failure notifications in the
+system log — that specific message means Phase 1 succeeded (they can talk)
+but the two sides couldn't agree on Phase 2 parameters.
+
+Two distinct root causes produce the same symptom:
+
+- **ESP transform mismatch** — the local IPsec Crypto Profile
+  (encryption/authentication algorithms) doesn't match what the peer
+  proposes. This is what happens when one side's crypto profile is changed
+  as a hardening step (e.g. AES-128/SHA1 → AES-256/SHA256) without the peer
+  making the same change in the same window. See
+  [INC-003](../incident-command-center/INC-003-ipsec-phase2-failure.md) for
+  the full writeup — the fix is coordinated cutover, not reverting the
+  hardening.
+- **Proxy-ID / traffic selector mismatch** — the local and remote
+  "protected subnet" definitions on the two peers don't mirror each other.
+  Common trigger: a new subnet is added on one side (see `New-Dept-Subnet`
+  in [`policies/nat-policy-matrix.md`](../policies/nat-policy-matrix.md))
+  and the tunnel's proxy-ID isn't updated to match, or isn't updated on
+  the peer's device at the same time.
+
+```
+Network > IPSec Tunnels > <tunnel> > Proxy IDs
+Confirm Local/Remote match exactly what the peer has configured — including
+subnet mask, not just network address.
+```
+
+## Step 4: Both phases up, but traffic still doesn't pass
+
+This is a NAT problem, not a VPN problem. VPN-destined traffic must hit a
+**bypass NAT rule** (no translation) before any generic outbound SNAT rule,
+or the packets get translated before the firewall recognizes them as tunnel
+traffic — the tunnel negotiates fine but useful data never crosses it.
+
 ```
 Policies > NAT
 Order should be:
-1. VPN-Bypass-NAT (no translation)
+1. VPN-Bypass-NAT (no translation) — must be above any general SNAT rule
+   for the same source zone
 2. Internal-to-Internet-SNAT (translate)
-3. [Other rules]
+3. [other rules]
 ```
 
-**Step 3: Reset VPN Tunnel**
+See [`policies/nat-policy-matrix.md`](../policies/nat-policy-matrix.md) for
+the exact rule this repo uses, and
+[INC-001](../incident-command-center/INC-001-nat-rule-shadowing.md) for how
+rule shadowing breaks this same mechanism for non-VPN traffic.
+
+## Useful commands, by task
+
 ```
-Monitor > VPN > IPSec > Tunnels
-Select tunnel > Clear IKE SA
-Wait 10 seconds for renegotiation
-```
+# Status
+> show vpn ike-sa gateway <gateway-name>
+> show vpn ipsec-sa
+> show vpn flow name <tunnel-name>
 
-**Step 4: Verify Tunnel Status**
-```
-Monitor > VPN > IPSec > Tunnels
-Expected:
-- Tunnel State: Active
-- Encrypt/Decrypt packets > 0
-- No errors
-```
+# Force renegotiation (use during a coordinated change window, not blindly)
+> clear vpn ike-sa gateway <gateway-name>
+> clear vpn ipsec-sa tunnel <tunnel-name>
 
-**Step 5: Test Connectivity**
-```
-Device > Diagnostics > Ping
-Host: [remote-subnet-host]
-Expected: Success
-```
-
-### Verification
-
-✅ VPN Tunnel Status: Active
-✅ Ping to remote subnet: Successful
-✅ Bidirectional traffic: Confirmed
-✅ NAT bypass verified: Yes
-✅ Tunnel stable: Yes (tested 30 min)
-
-## Prevention
-
-### Best Practices
-
-1. **NAT Rule Ordering**
-   - Place bypass rules first
-   - Review order monthly
-   - Document all rules
-
-2. **VPN Configuration**
-   - Test immediately after setup
-   - Monitor tunnel health
-   - Alert on tunnel down
-
-3. **Testing**
-   - Verify bidirectional traffic
-   - Test failover scenarios
-   - Monitor long-term stability
-
-### Monitoring Setup
-
-**Enable VPN Logging**
-```
-Device > Setup > Logging
-VPN Events: Enable
-Log Level: informational
-
-Policies > Security > [VPN Policy]
-Logging Tab:
-- Log at Session Start: yes
-- Log at Session End: yes
-- Log Session Summary: yes
-```
-
-**Create Alerts**
-```
-Device > Alert Rules > Add
-
-Name: VPN-Tunnel-Down
-Event Type: VPN
-Trigger: Tunnel Down
-Action: Email to admin@lab.local
-```
-
-## Common VPN Issues
-
-### Issue 1: Phase 1 Fails
-**Cause:** IKE negotiation mismatch
-**Solution:** 
-- Verify IKE proposals match
-- Check pre-shared key
-- Verify encryption algorithms
-
-### Issue 2: Phase 2 Fails
-**Cause:** IPSec transform mismatch
-**Solution:**
-- Match IPSec crypto profiles
-- Verify DH groups
-- Check ESP protocols
-
-### Issue 3: Slow Throughput
-**Cause:** Policy mismatch or logging overhead
-**Solution:**
-- Review security policies
-- Disable verbose logging
-- Enable hardware acceleration
-
-### Issue 4: Intermittent Disconnects
-**Cause:** Session timeout or NAT issues
-**Solution:**
-- Increase DPD timeout
-- Configure keepalives
-- Verify NAT rules
-
-## Commands Reference
-
-### View VPN Status
-```
-> show vpn ipsec status
-> show vpn flow name [tunnel-name]
-> show vpn gateway [gateway-name]
-```
-
-### Clear VPN Session
-```
-> clear vpn ipsec sa gateway [gateway-name]
-> clear vpn ipsec sa tunnel [tunnel-name]
-```
-
-### Debug VPN
-```
+# Debug (short-lived, disable when done — verbose)
 > debug ike on
+> debug ike stat
 > debug crypto on
-> debug vpn on
-```
 
-### Monitor VPN Packets
-```
-> show session all filter application vpn
+# Session/traffic once tunnel is up
+> show session all filter application ipsec
 > show counter global filter delta yes
 ```
 
-## Lab Results
+## Prevention
 
-✅ VPN tunnel established successfully
-✅ Bidirectional traffic flowing
-✅ NAT rules properly ordered
-✅ Bypass rules verified
-✅ Tunnel stable and monitored
-✅ Performance baseline established
-
----
-
-**Troubleshooting Complete** - VPN operational and stable
+1. **Never change an IPsec crypto profile unilaterally.** Treat it as a
+   two-party contract — schedule the change with the peer administrator in
+   the same window, and consider temporarily accepting both the old and
+   new proposal during cutover to avoid a hard outage.
+2. **Any subnet change behind a tunnel is a proxy-ID change.** Add it to
+   the [change review checklist](../policies/change-review-checklist.md)
+   for that tunnel, on both ends, before the subnet goes live.
+3. **Keep bypass-NAT above generic SNAT** for every zone pair that also
+   carries tunnel traffic, and verify it after any NAT rule reordering.
+4. **Enable VPN system logging and alert on tunnel-down**, not just on
+   negotiation failure — a tunnel that silently drops after establishing is
+   a different failure mode (DPD/keepalive tuning) than one that never
+   comes up.
