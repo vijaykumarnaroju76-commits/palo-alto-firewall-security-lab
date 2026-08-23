@@ -1,464 +1,141 @@
-# Palo Alto Firewall Security Lab
+# Palo Alto Firewall — Incident Response & Security Operations Lab
 
-Comprehensive enterprise perimeter security lab using Palo Alto Networks VM-Series firewall in a virtual environment.
+A Palo Alto Networks VM-Series lab built around a different question than
+"can I configure a firewall": **when something breaks in production, how do
+you find out why, prove the fix worked, and stop it from happening again?**
 
-## Project Overview
+This is not an architecture showcase. There's no diagram of racks and zones
+up front — that's one paragraph in [Lab Environment](#lab-environment)
+below. The rest of the repository is organized around **incidents**: real
+operational failure patterns on a Palo Alto firewall, each one investigated
+from symptom to root cause to validated fix.
 
-This lab demonstrates real-world firewall operations including:
-- Security policy configuration
-- NAT policy implementation
-- Application-aware and identity-based enforcement
-- VPN tunnel configuration (GlobalProtect & IPSec)
-- URL filtering and threat prevention
-- Troubleshooting VPN connectivity issues
+## Incident Command Center
 
-## Lab Environment
-
-**Firewall:** Palo Alto Networks VM-Series
-**Platform:** VMware/KVM Virtual Environment
-**Management:** Web UI & CLI
-**Connectivity:** Multi-segment network with remote access
-
-## Key Components
-
-### 1. Security Policies
-- Inbound traffic control
-- Outbound traffic filtering
-- Application-based policies
-- Logging and monitoring
-
-### 2. NAT Policies
-- Source NAT (SNAT) for outbound traffic
-- Destination NAT (DNAT) for inbound traffic
-- Rule ordering and precedence
-- Static and dynamic NAT rules
-
-### 3. App-ID
-- Application identification
-- Protocol parsing
-- Risk scoring
-- Custom applications
-
-### 4. User-ID
-- User identification
-- Group-based policies
-- Authentication integration
-- User activity logging
-
-### 5. Remote Access
-- GlobalProtect VPN
-- IPSec tunnels
-- SSL VPN configuration
-- Portal and gateway setup
-
-### 6. URL Filtering
-- Website category filtering
-- Threat prevention
-- Custom URL lists
-- SSL inspection
-
-## Lab Architecture
+Every incident here follows the same diagnostic path — because on a
+PAN-OS firewall, that path *is* the architecture. NAT is evaluated before
+routing. Security policy depends on an App-ID classification that can
+change mid-session. A tunnel that's "up" might only be half up. Walking
+this sequence in order is what actually finds the root cause, not
+guessing from the symptom.
 
 ```
-┌──────────────────────────────────────────────────┐
-│        Internet / External Network       │
-└──────────────────────────┬──────────────────────┘
-               │
-        ┌──────────┬──────────┐
-        │  Palo Alto  │
-        │ VM-Series   │
-        │ Firewall    │
-        └──────────┬──────────┘
-               │
-    ┌──────────────────┬──────────────────┐
-    │          │          │
-┌──────┬──────┐  ┌──────┬──────┐  ┌──────┬──────┐
-│Trust │  │ DMZ  │  │Guest │
-│Zone  │  │Zone  │  │Zone  │
-└──────┬──────┘  └──────┬──────┘  └──────┬──────┘
-    │         │         │
-┌──────────────────────────────────────────┐
-│   Internal Segment         │
-│  - Workstations           │
-│  - Servers                │
-│  - Web Services           │
-└──────────────────────────────────────────┘
+        SYMPTOM
+   "Application unreachable / degraded"
+              │
+              ▼
+     ┌─────────────────┐
+     │   Traffic Logs   │  Monitor > Logs > Traffic — allow/deny, session end reason
+     └────────┬─────────┘
+              ▼
+     ┌─────────────────┐
+     │  Session Lookup  │  show session all / show session id — does a session exist?
+     └────────┬─────────┘
+              ▼
+     ┌─────────────────┐
+     │   Route Lookup   │  test routing fib-lookup — where does this destination resolve?
+     └────────┬─────────┘
+              ▼
+     ┌─────────────────┐
+     │    NAT Policy    │  show rule-hit-count (nat) — which rule matched, in what order?
+     └────────┬─────────┘
+              ▼
+     ┌─────────────────┐
+     │ Security Policy  │  App-ID classification, zone match, rule-hit-count (security)
+     │    + App-ID      │
+     └────────┬─────────┘
+              ▼
+     ┌─────────────────┐
+     │  VPN / IPsec     │  show vpn ike-sa / show vpn ipsec-sa — Phase 1 vs Phase 2
+     └────────┬─────────┘
+              ▼
+        ROOT CAUSE
+              │
+              ▼
+     FIX  →  VALIDATE  →  DOCUMENT  →  PREVENT
 ```
 
-## Configuration Files
+Full methodology behind this diagram:
+[`runbooks/packet-flow-troubleshooting.md`](runbooks/packet-flow-troubleshooting.md).
 
-### Security Policies
-- `configs/security-policies.xml`
-- `configs/security-rules.txt`
+## Incident index
 
-### NAT Configuration
-- `configs/nat-policies.xml`
-- `configs/nat-rules.txt`
+Each incident follows the same structure:
+**Impact → Symptom → Hypotheses → Investigation → Evidence → Root Cause →
+Fix → Validation → Prevention** — including the hypotheses that turned out
+to be wrong, because ruling things out is most of the actual work.
 
-### VPN Configuration
-- `configs/ipsec-vpn.xml`
-- `configs/globalprotect.xml`
-- `configs/vpn-troubleshooting.md`
+| ID | Incident | Stage of the flow it lives in | Root cause category |
+|----|----------|-------------------------------|----------------------|
+| [INC-001](incident-command-center/INC-001-nat-rule-shadowing.md) | NAT rule shadowing / incorrect NAT precedence | NAT Policy | Overly broad address object shadowing a specific rule |
+| [INC-002](incident-command-center/INC-002-security-policy-deny.md) | Security policy deny / App-ID reclassification | Security Policy + App-ID | Rule scoped to an assumed App-ID that didn't match App-ID's actual classification |
+| [INC-003](incident-command-center/INC-003-ipsec-phase2-failure.md) | IPsec Phase 2 failure after crypto hardening | VPN / IPsec | One-sided crypto profile change, uncoordinated with the peer |
+| [INC-004](incident-command-center/INC-004-asymmetric-routing.md) | Asymmetric routing / session drop after redundant ISP rollout | Route Lookup + stateful session tracking | New egress path added without pinning symmetric return traffic |
 
-### App-ID & User-ID
-- `configs/app-id-config.xml`
-- `configs/user-id-config.xml`
+More incidents get added here only when they exercise a genuinely different
+failure mode — the goal is four to seven incidents worth reading closely,
+not a long list of shallow ones.
 
-### URL Filtering
-- `configs/url-filtering.xml`
-- `configs/threat-profiles.xml`
+## Repository structure
 
-## Lab Setup Steps
-
-### Phase 1: Initial Firewall Setup
-1. Deploy Palo Alto VM-Series
-2. Configure management IP
-3. Set admin credentials
-4. Perform factory reset if needed
-5. Update to latest OS version
-
-### Phase 2: Network Configuration
-1. Configure ethernet interfaces
-2. Create network zones
-3. Set up VLAN tagging
-4. Configure IP addresses
-5. Enable routing protocols
-
-### Phase 3: Security Policy Configuration
-1. Define security zones
-2. Create inbound policies
-3. Create outbound policies
-4. Configure logging
-5. Test policy enforcement
-
-### Phase 4: NAT Configuration
-1. Configure Source NAT
-2. Configure Destination NAT
-3. Test NAT translation
-4. Verify rule ordering
-5. Monitor NAT sessions
-
-### Phase 5: App-ID Setup
-1. Enable App-ID
-2. Configure application groups
-3. Create application-based rules
-4. Monitor application usage
-5. Tune detection accuracy
-
-### Phase 6: User-ID Implementation
-1. Configure User-ID agent
-2. Setup LDAP/AD integration
-3. Create user-based policies
-4. Enable user logging
-5. Verify user identification
-
-### Phase 7: VPN Configuration
-1. Configure IPSec profiles
-2. Setup IPSec tunnels
-3. Configure GlobalProtect
-4. Test VPN connectivity
-5. Troubleshoot connectivity issues
-
-### Phase 8: URL Filtering
-1. Enable URL filtering
-2. Configure categories
-3. Create URL filter policies
-4. Test blocking
-5. Monitor filtered requests
-
-## Configuration Examples
-
-### Basic Security Policy
-```xml
-<security>
-  <rules>
-    <entry name="Allow-Internal-to-DMZ">
-      <to>dmz</to>
-      <from>trust</from>
-      <source>
-        <member>internal-subnet</member>
-      </source>
-      <destination>
-        <member>web-servers</member>
-      </destination>
-      <service>
-        <member>http</member>
-        <member>https</member>
-      </service>
-      <application>
-        <member>web-browsing</member>
-      </application>
-      <action>allow</action>
-      <log-setting>default</log-setting>
-    </entry>
-  </rules>
-</security>
+```
+palo-alto-firewall-security-lab/
+├── README.md
+├── incident-command-center/     Full incident writeups (the core of this repo)
+├── policies/                    Security & NAT rule-base reference, change checklist
+├── runbooks/                    Packet-flow methodology, VPN troubleshooting,
+│                                 pre/post-change validation
+├── evidence/                    Sanitized logs, session analysis, structured
+│                                 validation records the incidents cite
+├── docs/                        Lab environment setup guide
+└── .github/workflows/           CI: markdown lint, internal link check, JSON/YAML validation
 ```
 
-### Source NAT Configuration
-```xml
-<nat>
-  <rules>
-    <entry name="Internal-to-Internet-NAT">
-      <from>trust</from>
-      <to>untrust</to>
-      <source>
-        <member>internal-subnet</member>
-      </source>
-      <destination>
-        <member>any</member>
-      </destination>
-      <service>any</service>
-      <source-translation>
-        <dynamic-ip-and-port>
-          <translated-address>
-            <member>firewall-external-ip</member>
-          </translated-address>
-        </dynamic-ip-and-port>
-      </source-translation>
-    </entry>
-  </rules>
-</nat>
-```
+- **[`policies/security-policy-matrix.md`](policies/security-policy-matrix.md)**
+  and **[`policies/nat-policy-matrix.md`](policies/nat-policy-matrix.md)** —
+  the actual rule base referenced throughout the incidents, including the
+  "before" state that caused INC-001, kept as a reference for what
+  shadowing looks like.
+- **[`policies/change-review-checklist.md`](policies/change-review-checklist.md)**
+  — the checklist that exists because every incident here traces back to a
+  change that skipped one of its items.
+- **[`runbooks/`](runbooks/)** — the reusable diagnostic procedures:
+  packet-flow triage, IPsec Phase 1/Phase 2 troubleshooting, and
+  pre/post-change validation mechanics.
+- **[`evidence/`](evidence/)** — sanitized traffic logs, session-table
+  comparisons, and structured validation JSON per incident. All synthetic;
+  see [`evidence/README.md`](evidence/README.md) for the IP-addressing
+  convention that keeps it that way verifiably (RFC 1918 / RFC 5737
+  documentation ranges only).
 
-### IPSec VPN Configuration
-```xml
-<ipsec>
-  <crypto-profiles>
-    <ipsec-crypto>
-      <entry name="VPN-Crypto-Profile">
-        <esp-encryption>
-          <member>aes-128-cbc</member>
-          <member>aes-256-cbc</member>
-        </esp-encryption>
-        <esp-authentication>
-          <member>sha1</member>
-          <member>sha256</member>
-        </esp-authentication>
-        <dh-group>
-          <member>group2</member>
-          <member>group14</member>
-        </dh-group>
-      </entry>
-    </ipsec-crypto>
-  </crypto-profiles>
-</ipsec>
-```
+## Lab environment
 
-## Troubleshooting Guide
+**Firewall:** Palo Alto Networks VM-Series, deployed on VMware/KVM.
+**Zones:** `trust` (10.0.1.0/24 internal), `dmz` (10.0.2.0/24 published
+services), `untrust` + `untrust2` (dual ISP egress, see INC-004), plus a
+site-to-site IPsec tunnel to a partner network. Full deployment steps in
+[`docs/setup-guide.md`](docs/setup-guide.md). The zone/subnet/object
+definitions actually used by the policies and incidents in this repo are
+tracked in [`policies/security-policy-matrix.md`](policies/security-policy-matrix.md),
+not restated here, so there's one source of truth instead of two documents
+drifting apart.
 
-### VPN Connectivity Failure
+## Status
 
-**Issue:** VPN tunnel not establishing
+This is an active, in-progress portfolio project — incidents and runbooks
+are added as they're written and validated, not claimed in advance. Each
+incident file states what was actually checked; nothing here should be
+read as a claim about a live production deployment or a vendor
+certification unless explicitly stated in that file.
 
-**Diagnosis:**
-1. Check VPN status: `show vpn flow`
-2. Verify NAT rule ordering
-3. Check phase 1 & 2 status
-4. Review debug logs
+## Companion projects
 
-**Root Cause:** Incorrect NAT rule ordering
-- NAT rules were blocking VPN traffic
-- Bypass-NAT rules not configured for VPN
-- NAT rule precedence incorrect
-
-**Resolution:**
-1. Create bypass-NAT rules for VPN traffic
-2. Reorder NAT rules (VPN bypass first)
-3. Apply NAT policies before generic rules
-4. Verify tunnel re-establishes
-
-**Verification:**
-```
-show vpn ipsec status
-show vpn flow name <tunnel-name>
-show routing fib
-```
-
-### Common Issues
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| VPN Down | NAT mismatch | Check bypass-NAT rules |
-| Slow Traffic | Policy mismatch | Review security rules |
-| User auth fails | LDAP issue | Test LDAP connectivity |
-| URL filter not working | SSL inspection disabled | Enable SSL inspection |
-| App-ID not detecting | Inspection disabled | Enable App-ID inspection |
-
-## Monitoring & Logging
-
-### Monitor Tabs
-- Traffic logs
-- Threat logs
-- URL filtering logs
-- Data filtering logs
-- System logs
-- Configuration logs
-
-### Key Metrics
-- Active sessions
-- Throughput (MB/s)
-- Threat statistics
-- Policy violations
-- VPN tunnel status
-
-## Performance Tuning
-
-### Optimization Steps
-1. Enable hardware acceleration
-2. Tune security processing
-3. Optimize rule order
-4. Enable fast path
-5. Configure QoS policies
-
-### Baseline Metrics
-- Throughput: Target > 100 Mbps
-- Latency: < 50ms for encrypted traffic
-- Connection setup: < 500ms
-- Policy application: < 100ms
-
-## Security Best Practices
-
-1. **Rule Management**
-   - Use descriptive names
-   - Document all rules
-   - Regular rule audits
-   - Remove unused rules
-
-2. **NAT Configuration**
-   - Explicit bypass rules for VPN
-   - Review rule ordering monthly
-   - Monitor NAT translations
-
-3. **VPN Security**
-   - Use strong encryption (AES-256)
-   - Regular tunnel monitoring
-   - Test failover scenarios
-   - Monitor tunnel health
-
-4. **User Access**
-   - Implement User-ID
-   - Use strong authentication
-   - Regular access reviews
-   - Monitor user activity
-
-5. **Threat Prevention**
-   - Enable all threat profiles
-   - Regular signature updates
-   - Monitor threat logs
-   - Tune false positives
-
-## Lab Validation Tests
-
-### Test 1: Security Policy Enforcement
-```
-- Verify inbound traffic blocked
-- Verify outbound traffic allowed
-- Check logging
-- Validate policy application time
-```
-
-### Test 2: NAT Functionality
-```
-- Verify SNAT translation
-- Verify DNAT translation
-- Test rule ordering
-- Monitor NAT table
-```
-
-### Test 3: VPN Tunnel
-```
-- Establish IPSec tunnel
-- Test tunnel stability (30 min)
-- Verify data throughput
-- Test failover
-```
-
-### Test 4: App-ID Detection
-```
-- Identify web applications
-- Verify application groups
-- Test policy enforcement
-- Monitor accuracy
-```
-
-### Test 5: User-ID
-```
-- Verify user identification
-- Test group-based policies
-- Monitor user sessions
-- Validate user logging
-```
-
-### Test 6: URL Filtering
-```
-- Test category blocking
-- Verify URL filter accuracy
-- Check SSL inspection
-- Monitor filter logs
-```
-
-## Advanced Topics
-
-### MPLS Routing
-- MPLS label configuration
-- BGP integration
-- Traffic engineering
-
-### High Availability
-- Active-passive clustering
-- Session synchronization
-- Failover testing
-
-### Advanced Threat Prevention
-- Advanced URL filtering
-- File blocking
-- Vulnerability protection
-- DNS security
-
-### Policy Optimization
-- Rule consolidation
-- Zone optimization
-- Performance tuning
-
-## Documentation
-
-- `docs/setup-guide.md` - Step-by-step setup
-- `docs/configuration-guide.md` - Detailed config
-- `docs/vpn-troubleshooting.md` - VPN issues
-- `docs/nat-guide.md` - NAT configuration
-- `docs/app-id-guide.md` - App-ID setup
-- `docs/user-id-guide.md` - User-ID setup
-
-## Lab Results
-
-✅ Firewall deployed successfully
-✅ Security policies enforced
-✅ NAT policies functional
-✅ App-ID detecting applications
-✅ User-ID identifying users
-✅ GlobalProtect VPN operational
-✅ IPSec tunnels stable
-✅ URL filtering active
-✅ VPN connectivity issues resolved
-✅ Enterprise-grade security operational
-
-## References
-
-- Palo Alto Networks Documentation
-- VM-Series Deployment Guide
-- Security Policy Best Practices
-- VPN Configuration Guide
-- Threat Prevention Guide
+Part of a three-project set demonstrating different layers of network
+engineering: infrastructure design (hybrid architecture / IaC), operational
+automation (Netmiko/Ansible), and — this repository — security operations,
+troubleshooting, and controlled firewall change management.
 
 ## Author
 
 **Vijay Kumar Naroju**
-- Network Security Expert
-- Palo Alto Certified
-- GitHub: [@vijaykumarnaroju76-commits](https://github.com/vijaykumarnaroju76-commits)
-
----
-
-**Last Updated:** August 2026
-**Lab Status:** Complete & Operational
+GitHub: [@vijaykumarnaroju76-commits](https://github.com/vijaykumarnaroju76-commits)

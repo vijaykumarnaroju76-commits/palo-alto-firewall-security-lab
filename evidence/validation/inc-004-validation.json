@@ -1,0 +1,39 @@
+{
+  "incident_id": "INC-004",
+  "title": "Asymmetric routing / session drop after redundant ISP rollout",
+  "synthetic_data": true,
+  "validated_at": "2026-08-18T11:45:00Z",
+  "checks": [
+    {
+      "name": "consistent_ingress_egress_interface",
+      "command": "show session all filter destination 192.0.2.44",
+      "expected": "all sessions show untrust (ISP-A) for both directions",
+      "result": "pass"
+    },
+    {
+      "name": "no_return_traffic_on_secondary_isp",
+      "command": "packet capture on ethernet0/5 (untrust2) filtered to partner API destination",
+      "expected": "0 packets for this flow",
+      "result": "pass"
+    },
+    {
+      "name": "asymmetric_path_drop_counter_baseline",
+      "command": "show counter global filter delta yes severity drop",
+      "expected": "session_discard_asymmetric_path delta == 0 over 2 hour soak",
+      "result": "pass",
+      "observed": 0
+    },
+    {
+      "name": "synthetic_load_test_success_rate",
+      "command": "480 synthetic requests to partner API over 2 hour soak",
+      "expected": "0 failures",
+      "result": "pass",
+      "observed": {
+        "requests": 480,
+        "failures": 0,
+        "pre_fix_failure_rate_pct": 25
+      }
+    }
+  ],
+  "overall_result": "pass"
+}

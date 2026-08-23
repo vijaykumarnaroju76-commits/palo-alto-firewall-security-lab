@@ -1,0 +1,48 @@
+# INC-003 — sanitized evidence
+# Synthetic data for portfolio demonstration only. See ../README.md for the
+# IP-range convention used throughout this repository.
+
+## show vpn ike-sa gateway Partner-Site-Gateway
+
+gateway               peer-ip          state   role       lifetime-remaining
+Partner-Site-Gateway   192.0.2.20      UP      initiator  27114s
+
+# Phase 1 is healthy — peer is reachable and authenticated.
+
+## show vpn ipsec-sa
+
+tunnel                  gateway                 state   local-spi   remote-spi
+Site-to-Site-Tunnel     Partner-Site-Gateway     DOWN    -           -
+
+# Phase 2 never establishes despite Phase 1 being up.
+
+## Monitor > Logs > System, filter: subtype eq vpn AND eventid eq ike-nego-p2-fail
+
+receive_time            severity   description
+2026-08-16T08:41:03Z    medium     IKE phase-2 negotiation failed when processing Quick Mode message. Received Notify: NO-PROPOSAL-CHOSEN. Gateway: Partner-Site-Gateway
+2026-08-16T08:41:19Z    medium     IKE phase-2 negotiation failed when processing Quick Mode message. Received Notify: NO-PROPOSAL-CHOSEN. Gateway: Partner-Site-Gateway
+2026-08-16T08:41:35Z    medium     IKE phase-2 negotiation failed when processing Quick Mode message. Received Notify: NO-PROPOSAL-CHOSEN. Gateway: Partner-Site-Gateway
+
+## Local IPsec Crypto Profile at time of failure
+
+profile: Partner-VPN-IPSec-Crypto
+esp-encryption:      aes-256-cbc     <- changed same day (hardening)
+esp-authentication:  sha256          <- changed same day (hardening)
+dh-group:            group14
+
+## Partner's IPsec Crypto Profile (confirmed via partner network team,
+## not directly observable from this side)
+
+esp-encryption:      aes-128-cbc     <- unchanged, no overlapping proposal with local side
+esp-authentication:  sha1
+dh-group:            group14
+
+## show vpn ipsec-sa  (post-fix, after coordinated cutover)
+
+tunnel                  gateway                 state   local-spi    remote-spi
+Site-to-Site-Tunnel     Partner-Site-Gateway     UP      0xa41c2f09   0x7b3e91d4
+
+## show vpn flow name Site-to-Site-Tunnel  (post-fix, 30 min soak)
+
+tunnel                encrypt-pkts   decrypt-pkts   errors
+Site-to-Site-Tunnel    48213          47990          0

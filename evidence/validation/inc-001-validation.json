@@ -1,0 +1,34 @@
+{
+  "incident_id": "INC-001",
+  "title": "NAT rule shadowing / incorrect NAT precedence",
+  "synthetic_data": true,
+  "validated_at": "2026-08-12T10:05:00Z",
+  "checks": [
+    {
+      "name": "nat_translation_targets_correct_host",
+      "command": "show session all filter destination 203.0.113.51",
+      "expected": "nat-dest = 10.0.2.20",
+      "result": "pass"
+    },
+    {
+      "name": "new_rule_hit_count_incrementing",
+      "command": "show rule-hit-count rule-base nat vsys vsys1",
+      "expected": "Internet-to-NewApp-DNAT hit-count > 0",
+      "result": "pass",
+      "observed": "612"
+    },
+    {
+      "name": "legacy_rule_no_longer_absorbing_new_app_traffic",
+      "command": "show rule-hit-count rule-base nat vsys vsys1",
+      "expected": "Internet-to-WebServer-DNAT hit-count delta == 0 for destination 203.0.113.51",
+      "result": "pass"
+    },
+    {
+      "name": "legacy_service_unaffected_by_object_narrowing",
+      "command": "external functional test against https://203.0.113.50",
+      "expected": "200 OK, unchanged content",
+      "result": "pass"
+    }
+  ],
+  "overall_result": "pass"
+}

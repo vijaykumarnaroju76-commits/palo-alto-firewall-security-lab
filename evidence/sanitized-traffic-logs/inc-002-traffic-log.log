@@ -1,0 +1,38 @@
+# INC-002 — sanitized evidence
+# Synthetic data for portfolio demonstration only. See ../README.md for the
+# IP-range convention used throughout this repository.
+
+## Monitor > Logs > Traffic, filter: ( addr.dst in 10.0.2.30 )  (pre-fix)
+
+receive_time            src           dst          dport  application   action  rule                        session-end-reason
+2026-08-14T13:02:11Z    10.0.1.44     10.0.2.30    8443   ssl           allow   Allow-Trust-to-Inventory-API  tcp-fin
+2026-08-14T13:02:14Z    10.0.1.51     10.0.2.30    8443   unknown-tcp   deny    Deny-Unknown-Apps             policy-deny
+2026-08-14T13:02:17Z    10.0.1.19     10.0.2.30    8443   unknown-tcp   deny    Deny-Unknown-Apps             policy-deny
+2026-08-14T13:02:19Z    10.0.1.44     10.0.2.30    8443   ssl           allow   Allow-Trust-to-Inventory-API  tcp-fin
+2026-08-14T13:02:22Z    10.0.1.63     10.0.2.30    8443   unknown-tcp   deny    Deny-Unknown-Apps             policy-deny
+2026-08-14T13:02:25Z    10.0.1.28     10.0.2.30    8443   unknown-tcp   deny    Deny-Unknown-Apps             policy-deny
+
+# Same source subnet, same destination, same port. The only variable
+# separating "allow" from "deny" is App-ID's classification of the
+# session: some sessions never get past the provisional "ssl" guess
+# before the client disconnects; most run long enough for Content-ID to
+# see the actual (non-TLS) payload and reclassify as unknown-tcp, which
+# is denied.
+
+## show session id <id> (mid-failure sample, abbreviated)
+
+session id:        2204671
+application:        unknown-tcp        <- reclassified from initial "ssl" guess
+c2s flow:            10.0.1.51:52190 -> 10.0.2.30:8443
+state:               DISCARD
+policy re-evaluated: yes (application changed)
+matched rule:        Deny-Unknown-Apps
+
+## Monitor > Logs > Traffic, filter: ( addr.dst in 10.0.2.30 )  (post-fix,
+## after registering custom app "inventory-api" and updating the rule)
+
+receive_time            src           dst          dport  application     action  rule                        session-end-reason
+2026-08-14T14:31:02Z    10.0.1.44     10.0.2.30    8443   inventory-api   allow   Allow-Trust-to-Inventory-API  tcp-fin
+2026-08-14T14:31:05Z    10.0.1.51     10.0.2.30    8443   inventory-api   allow   Allow-Trust-to-Inventory-API  tcp-fin
+2026-08-14T14:31:08Z    10.0.1.19     10.0.2.30    8443   inventory-api   allow   Allow-Trust-to-Inventory-API  tcp-fin
+2026-08-14T14:31:11Z    10.0.1.63     10.0.2.30    8443   inventory-api   allow   Allow-Trust-to-Inventory-API  tcp-fin
