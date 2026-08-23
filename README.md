@@ -1,5 +1,7 @@
 # Palo Alto Firewall — Incident Response & Security Operations Lab
 
+[![Validation](https://github.com/vijaykumarnaroju76-commits/palo-alto-firewall-security-lab/actions/workflows/validation.yml/badge.svg?branch=main)](https://github.com/vijaykumarnaroju76-commits/palo-alto-firewall-security-lab/actions/workflows/validation.yml)
+
 A Palo Alto Networks VM-Series lab built around a different question than
 "can I configure a firewall": **when something breaks in production, how do
 you find out why, prove the fix worked, and stop it from happening again?**
