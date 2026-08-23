@@ -11,6 +11,7 @@
 ## Phase 1: VM Deployment
 
 ### Step 1: Upload OVA to Hypervisor
+
 1. Login to vSphere
 2. Right-click datacenter → Deploy OVF Template
 3. Select Palo Alto VM-Series OVA
@@ -19,12 +20,14 @@
 6. Attach network adapters to VLANs
 
 ### Step 2: Initial Boot
+
 1. Power on VM
 2. Wait for boot completion (3-5 minutes)
 3. Login via console (admin/admin)
 4. Change default password
 
 ### Step 3: Network Configuration
+
 ```
 Configure IP:
 eth0/1: 192.168.1.1/24 (Management)
@@ -34,7 +37,8 @@ eth0/4: 10.0.3.1/24 (Untrust)
 ```
 
 ### Step 4: Web UI Access
-1. Open browser: https://192.168.1.1
+
+1. Open browser: `https://192.168.1.1`
 2. Login: admin/[new-password]
 3. Accept license
 4. Complete setup wizard
@@ -42,12 +46,14 @@ eth0/4: 10.0.3.1/24 (Untrust)
 ## Phase 2: Initial Configuration
 
 ### Hostname & Domain
+
 ```
 device > setup > hostname: palo-alto-lab
 device > setup > domain: lab.local
 ```
 
 ### Admin Accounts
+
 ```
 device > administrators > Add admin user
 - Username: labadmin
@@ -56,6 +62,7 @@ device > administrators > Add admin user
 ```
 
 ### NTP Configuration
+
 ```
 device > setup > NTP > Add
 - Server: 8.8.8.8
@@ -66,7 +73,8 @@ device > setup > NTP > Add
 
 ### Create Security Zones
 
-**Trust Zone**
+#### Trust Zone
+
 ```
 Network > Zones > Add
 Name: trust
@@ -74,7 +82,8 @@ Type: Layer3
 Include Interface: ethernet0/2
 ```
 
-**DMZ Zone**
+#### DMZ Zone
+
 ```
 Network > Zones > Add
 Name: dmz
@@ -82,7 +91,8 @@ Type: Layer3
 Include Interface: ethernet0/3
 ```
 
-**Untrust Zone**
+#### Untrust Zone
+
 ```
 Network > Zones > Add
 Name: untrust
@@ -91,6 +101,7 @@ Include Interface: ethernet0/4
 ```
 
 ### Configure IP Addresses
+
 ```
 Network > Interfaces > Ethernet
 
@@ -114,6 +125,7 @@ Ethernet 0/4 (Untrust):
 ## Phase 4: Address & Service Objects
 
 ### Create Address Objects
+
 ```
 Objects > Addresses > Add
 
@@ -124,6 +136,7 @@ DB-Server: 10.0.1.20/32
 ```
 
 ### Create Service Objects
+
 ```
 Objects > Services > Add
 
@@ -136,6 +149,7 @@ Radius: UDP 1812
 ## Phase 5: Security Policy Configuration
 
 ### Inbound Policy (DMZ Traffic)
+
 ```
 Policies > Security > Add
 
@@ -151,6 +165,7 @@ Logging: yes
 ```
 
 ### Internal Policy (Trust to DMZ)
+
 ```
 Policies > Security > Add
 
@@ -166,6 +181,7 @@ Logging: yes
 ```
 
 ### Default Deny Policy
+
 ```
 Policies > Security > Add
 
@@ -183,6 +199,7 @@ Logging: yes
 ## Phase 6: NAT Configuration
 
 ### Source NAT (Internal to Internet)
+
 ```
 Policies > NAT > Add
 
@@ -198,6 +215,7 @@ Source Translation:
 ```
 
 ### Destination NAT (Web Server)
+
 ```
 Policies > NAT > Add
 
@@ -213,12 +231,14 @@ Translated Port: 80
 ## Phase 7: App-ID Configuration
 
 ### Enable App-ID
+
 ```
 Device > Setup > Content-ID > App-ID
 Enable: Yes
 ```
 
 ### Create Application Groups
+
 ```
 Objects > Application Groups > Add
 
@@ -234,6 +254,7 @@ Business-Apps:
 ```
 
 ### Create App-Based Policy
+
 ```
 Policies > Security > Add
 
@@ -246,6 +267,7 @@ Logging: yes
 ## Phase 8: User-ID Configuration
 
 ### Configure User-ID Agent
+
 ```
 Device > User Identification > User-ID Agent
 - Enabled: yes
@@ -253,6 +275,7 @@ Device > User Identification > User-ID Agent
 ```
 
 ### LDAP Integration
+
 ```
 Device > Servers > LDAP > Add
 
@@ -265,6 +288,7 @@ Password: [admin-password]
 ```
 
 ### Create User-Based Policy
+
 ```
 Policies > Security > Add
 
@@ -279,6 +303,7 @@ Logging: yes
 ## Phase 9: VPN Configuration
 
 ### IPSec VPN Setup
+
 ```
 Network > VPN > IPSec Crypto > Add
 
@@ -290,6 +315,7 @@ DH Group: group14
 ```
 
 ### IPSec Tunnel
+
 ```
 Network > IPSec Tunnels > Add
 
@@ -302,6 +328,7 @@ PeerSubnet: 192.168.0.0/16
 ```
 
 ### GlobalProtect Gateway
+
 ```
 Network > GlobalProtect > Gateway > Add
 
@@ -315,12 +342,14 @@ Authentication:
 ## Phase 10: URL Filtering
 
 ### Enable URL Filtering
+
 ```
 Device > Setup > Content-ID > URL Filtering
 Enabled: yes
 ```
 
 ### URL Filter Policy
+
 ```
 Policies > Security > URL Filtering > Add
 
@@ -332,6 +361,7 @@ Logging: yes
 ```
 
 ### Custom URL List
+
 ```
 Objects > Custom URL Category > Add
 
@@ -342,6 +372,7 @@ URLs:
 ```
 
 ## Commit Changes
+
 ```
 Commit > Commit and Push to Devices
 - Description: Initial configuration
@@ -352,17 +383,20 @@ Commit > Commit and Push to Devices
 ## Verification
 
 ### Check Policy Status
+
 ```
 Policies > Security > View Policy HitCount
 ```
 
 ### Monitor Traffic
+
 ```
 Monitor > Traffic > Logs
 Filter: last hour
 ```
 
 ### Test Connectivity
+
 ```
 Device > Diagnostics > Ping
 Host: 8.8.8.8
