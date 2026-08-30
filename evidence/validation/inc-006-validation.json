@@ -1,0 +1,30 @@
+{
+  "incident_id": "INC-006",
+  "scenario": "globalprotect_connected_but_internal_applications_unreachable",
+  "evidence_type": "modeled_synthetic_validation",
+  "pre_fix": {
+    "globalprotect_connection": "pass",
+    "authentication": "pass",
+    "tunnel_ip_assignment": "pass",
+    "internal_dns": "pass",
+    "routing": "pass",
+    "user_id_mapping": "fail",
+    "source_user_resolution": "fail",
+    "identity_based_policy_match": "fail",
+    "application_reachability": "fail"
+  },
+  "root_cause": "missing_user_id_mapping_for_globalprotect_tunnel_ip",
+  "post_fix": {
+    "globalprotect_connection": "pass",
+    "authentication": "pass",
+    "tunnel_ip_assignment": "pass",
+    "internal_dns": "pass",
+    "routing": "pass",
+    "user_id_mapping": "pass",
+    "source_user_resolution": "pass",
+    "identity_based_policy_match": "pass",
+    "application_reachability": "pass"
+  },
+  "rollback_required": false,
+  "scope_note": "Synthetic documentation evidence for a modeled Palo Alto GlobalProtect/User-ID incident; not a claim of production execution."
+}
