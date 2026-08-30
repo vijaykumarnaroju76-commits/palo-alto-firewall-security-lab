@@ -74,6 +74,7 @@ to be wrong, because ruling things out is most of the actual work.
 | [INC-003](incident-command-center/INC-003-ipsec-phase2-failure.md) | IPsec Phase 2 failure after crypto hardening | VPN / IPsec | One-sided crypto profile change, uncoordinated with the peer |
 | [INC-004](incident-command-center/INC-004-asymmetric-routing.md) | Asymmetric routing / session drop after redundant ISP rollout | Route Lookup + stateful session tracking | New egress path added without pinning symmetric return traffic |
 | [INC-005](incident-command-center/INC-005-ha-failover-partial-connectivity.md) | Active/passive HA failover with partial connectivity loss | HA + Layer 2 convergence | Stale upstream neighbor state after failover |
+| [INC-006](incident-command-center/INC-006-globalprotect-internal-access.md) | GlobalProtect connected but internal applications unreachable | GlobalProtect + User-ID + Security Policy | Missing IP-to-user mapping prevents identity-based allow rule match |
 
 More incidents get added here only when they exercise a genuinely different
 failure mode — the goal is four to seven incidents worth reading closely,
@@ -87,7 +88,7 @@ palo-alto-firewall-security-lab/
 ├── incident-command-center/     Full incident writeups (the core of this repo)
 ├── policies/                    Security & NAT rule-base reference, change checklist
 ├── runbooks/                    Packet-flow methodology, VPN troubleshooting,
-│                                 pre/post-change validation, HA failover validation
+│                                 pre/post-change validation, HA failover validation, GlobalProtect/User-ID troubleshooting
 ├── evidence/                    Sanitized logs, session analysis, structured
 │                                 validation records the incidents cite
 ├── docs/                        Lab environment setup guide
