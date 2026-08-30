@@ -73,6 +73,7 @@ to be wrong, because ruling things out is most of the actual work.
 | [INC-002](incident-command-center/INC-002-security-policy-deny.md) | Security policy deny / App-ID reclassification | Security Policy + App-ID | Rule scoped to an assumed App-ID that didn't match App-ID's actual classification |
 | [INC-003](incident-command-center/INC-003-ipsec-phase2-failure.md) | IPsec Phase 2 failure after crypto hardening | VPN / IPsec | One-sided crypto profile change, uncoordinated with the peer |
 | [INC-004](incident-command-center/INC-004-asymmetric-routing.md) | Asymmetric routing / session drop after redundant ISP rollout | Route Lookup + stateful session tracking | New egress path added without pinning symmetric return traffic |
+| [INC-005](incident-command-center/INC-005-ha-failover-partial-connectivity.md) | Active/passive HA failover with partial connectivity loss | HA + Layer 2 convergence | Stale upstream neighbor state after failover |
 
 More incidents get added here only when they exercise a genuinely different
 failure mode — the goal is four to seven incidents worth reading closely,
@@ -86,7 +87,7 @@ palo-alto-firewall-security-lab/
 ├── incident-command-center/     Full incident writeups (the core of this repo)
 ├── policies/                    Security & NAT rule-base reference, change checklist
 ├── runbooks/                    Packet-flow methodology, VPN troubleshooting,
-│                                 pre/post-change validation
+│                                 pre/post-change validation, HA failover validation
 ├── evidence/                    Sanitized logs, session analysis, structured
 │                                 validation records the incidents cite
 ├── docs/                        Lab environment setup guide

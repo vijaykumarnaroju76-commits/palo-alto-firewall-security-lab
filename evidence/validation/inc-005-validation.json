@@ -1,0 +1,28 @@
+{
+  "incident_id": "INC-005",
+  "scenario": "active_passive_ha_failover_partial_connectivity",
+  "evidence_type": "modeled_synthetic_validation",
+  "pre_fix": {
+    "ha_role_transition": "pass",
+    "configuration_sync": "pass",
+    "interfaces": "pass",
+    "routing": "pass",
+    "nat_policy": "pass",
+    "security_policy": "pass",
+    "session_processing": "pass",
+    "application_reachability": "fail",
+    "upstream_layer2_convergence": "fail"
+  },
+  "root_cause": "upstream_device_failed_to_refresh_layer2_state_from_ha_gratuitous_arp_update",
+  "post_fix": {
+    "ha_role_transition": "pass",
+    "interfaces": "pass",
+    "routing": "pass",
+    "nat_policy": "pass",
+    "security_policy": "pass",
+    "neighbor_convergence": "pass",
+    "application_reachability": "pass"
+  },
+  "rollback_required": false,
+  "scope_note": "Synthetic documentation evidence for a modeled Palo Alto HA incident; not a claim of production HA execution."
+}
