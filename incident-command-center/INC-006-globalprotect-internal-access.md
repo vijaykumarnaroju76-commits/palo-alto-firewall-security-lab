@@ -144,7 +144,6 @@ Validate that GlobalProtect authentication information is being learned by User-
 
 After the mapping is restored, re-evaluate the affected traffic against the intended identity-based security rule.
 
-
 ## Validation
 
 Post-fix validation must confirm:
@@ -161,7 +160,6 @@ Post-fix validation must confirm:
 
 A successful VPN connection and successful application access are treated as separate validation points.
 
-
 ## Evidence
 
 Evidence for this modeled incident includes:
@@ -176,7 +174,6 @@ Evidence for this modeled incident includes:
 - Structured post-fix validation JSON.
 
 All usernames, IP addresses, application names, and command outputs in this scenario are sanitized or synthetic documentation examples.
-
 
 ## Prevention
 
