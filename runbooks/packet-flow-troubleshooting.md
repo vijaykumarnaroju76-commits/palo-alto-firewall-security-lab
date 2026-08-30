@@ -14,30 +14,25 @@ looking.
 
 ```
 1. Ingress (zone/interface)
-2. Session lookup       — existing session? if yes, fast-path, skip to 8
+2. Session lookup — existing session? use the installed session state
 3. Zone protection / DoS checks
-4. NAT policy lookup     — determines destination NAT (if any) BEFORE routing
-5. Route lookup          — uses the POST-NAT destination for DNAT'd traffic
-6. Security policy lookup — zones + address objects + App-ID (initial guess) + User-ID
-7. Source NAT applied, session installed
-8. Content-ID / App-ID refinement as more packets arrive
-   → App-ID can RECLASSIFY mid-session; if it does, policy is re-evaluated
-9. Forwarding / egress
+4. Initial route lookup — original destination determines pre-NAT egress interface/zone
+5. NAT policy lookup — matches the original packet and pre-NAT destination zone
+6. Post-NAT route/zone determination for DNAT — translated destination determines actual egress/post-NAT zone
+7. Security policy lookup — original IP addresses + post-NAT zones + App-ID + User-ID
+8. Session installation and forwarding decision
+9. Content-ID / App-ID refinement as more packets arrive
+   → App-ID can RECLASSIFY mid-session; policy can be re-evaluated
+10. NAT translation on egress / forwarding
 ```
 
 The two stages that most often surprise people coming from other
 firewall platforms:
 
-- **NAT is evaluated before routing**, so a DNAT rule changes what the route
-  lookup even sees. If you're chasing a routing symptom, check whether NAT
-  quietly redirected the destination first.
-- **App-ID is not final at step 6.** The first few packets get a
-  provisional classification (often based on port), and the policy match
-  at step 6 uses that. As Content-ID inspects more of the flow, App-ID can
-  change its answer — and PAN-OS re-checks the session against policy when
-  it does. A session that was allowed on packet 1 can be denied on packet
-  40 if the real application turns out to be something the rule doesn't
-  permit. This is exactly what happened in
+- **Routing participates before NAT rule matching.** PAN-OS first looks up the original destination to determine the pre-NAT egress interface and destination zone used for NAT matching.
+- **NAT rule matching is not the same as translation.** The NAT rule selects the required translation, but the actual address or port rewrite occurs on egress.
+- **Security policy uses original IP addresses with post-NAT zones.** For DNAT, the translated destination determines the destination zone, while Security policy address fields still reference the original pre-NAT IP addresses.
+- **App-ID is not final at the first policy lookup.** As more packets are inspected, App-ID can become more specific and policy can be re-evaluated for the session.
   [INC-002](../incident-command-center/INC-002-security-policy-deny.md).
 
 ## Where to look, mapped to the flow

@@ -15,11 +15,11 @@ for the sanitization convention used across the repo.
 
 | Zone | Interface | Subnet | Purpose |
 |------|-----------|--------|---------|
-| `trust` | ethernet0/2 | 10.0.1.0/24 | Internal workstations/servers |
-| `trust` (extended) | ethernet0/2.4 | 10.0.4.0/24 | New department segment added post-launch (see INC-003) |
-| `dmz` | ethernet0/3 | 10.0.2.0/24 | Published services |
-| `untrust` | ethernet0/4 | 203.0.113.0/28 | Primary ISP (ISP-A) |
-| `untrust2` | ethernet0/5 | 198.51.100.0/28 | Redundant ISP (ISP-B), added for INC-004 |
+| `trust` | ethernet1/1 | 10.0.1.0/24 | Internal workstations/servers |
+| `trust` (extended) | ethernet1/1.4 | 10.0.4.0/24 | New department segment added post-launch (see INC-003) |
+| `dmz` | ethernet1/2 | 10.0.2.0/24 | Published services |
+| `untrust` | ethernet1/3 | 203.0.113.0/28 | Primary ISP (ISP-A) |
+| `untrust2` | ethernet1/4 | 198.51.100.0/28 | Redundant ISP (ISP-B), added for INC-004 |
 | `vpn` (via `tunnel.1`) | tunnel.1 | 172.16.50.0/24 (remote) | Partner site-to-site IPsec |
 
 ## Address objects
@@ -41,8 +41,8 @@ for the sanitization convention used across the repo.
 
 | # | Name | From → To | Source | Destination | Application | Service | Action | Log | Notes |
 |---|------|-----------|--------|-------------|-------------|---------|--------|-----|-------|
-| 1 | `Allow-Internet-to-WebServer` | untrust → dmz | any | Web-Server | web-browsing, ssl | tcp/80, tcp/443 | Allow | Yes | Post-DNAT destination |
-| 2 | `Allow-Internet-to-NewApp` | untrust → dmz | any | NewApp-Server | web-browsing, ssl | tcp/443 | Allow | Yes | Added for INC-001 fix; requires the narrowed NAT object above |
+| 1 | `Allow-Internet-to-WebServer` | untrust → dmz | any | Public-IP-WebServer | web-browsing, ssl | tcp/80, tcp/443 | Allow | Yes | Original public destination address with post-DNAT `dmz` zone |
+| 2 | `Allow-Internet-to-NewApp` | untrust → dmz | any | Public-IP-NewApp | web-browsing, ssl | tcp/443 | Allow | Yes | Added for INC-001 fix; requires the narrowed NAT object above |
 | 3 | `Allow-Trust-to-Inventory-API` | trust → dmz | Internal-Subnet | Inventory-API-Server | inventory-api (custom App-ID) | tcp/8443 | Allow | Yes | App changed from generic `ssl` to a registered custom app after INC-002 |
 | 4 | `Allow-Internal-to-DMZ` | trust → dmz | Internal-Subnet | any | any | any | Allow | Yes | Broad legacy rule; candidate for tightening (see `change-review-checklist.md`) |
 | 5 | `Allow-Trust-to-Partner-VPN` | trust → vpn | Internal-Subnet, New-Dept-Subnet | Partner-Remote-Subnet | any | any | Allow | Yes | `New-Dept-Subnet` added after INC-003; must stay in lock-step with the tunnel's proxy-ID |

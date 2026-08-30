@@ -12,7 +12,7 @@
     },
     {
       "name": "no_return_traffic_on_secondary_isp",
-      "command": "packet capture on ethernet0/5 (untrust2) filtered to partner API destination",
+      "command": "packet capture on ethernet1/4 (untrust2) filtered to partner API destination",
       "expected": "0 packets for this flow",
       "result": "pass"
     },
