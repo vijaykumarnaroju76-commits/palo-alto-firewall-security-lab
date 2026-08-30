@@ -121,23 +121,3 @@ definitions actually used by the policies and incidents in this repo are
 tracked in [`policies/security-policy-matrix.md`](policies/security-policy-matrix.md),
 not restated here, so there's one source of truth instead of two documents
 drifting apart.
-
-## Status
-
-This is an active, in-progress portfolio project — incidents and runbooks
-are added as they're written and validated, not claimed in advance. Each
-incident file states what was actually checked; nothing here should be
-read as a claim about a live production deployment or a vendor
-certification unless explicitly stated in that file.
-
-## Companion projects
-
-Part of a three-project set demonstrating different layers of network
-engineering: infrastructure design (hybrid architecture / IaC), operational
-automation (Netmiko/Ansible), and — this repository — security operations,
-troubleshooting, and controlled firewall change management.
-
-## Author
-
-**Vijay Kumar Naroju**
-GitHub: [@vijaykumarnaroju76-commits](https://github.com/vijaykumarnaroju76-commits)
