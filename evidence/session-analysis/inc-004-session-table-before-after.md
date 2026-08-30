@@ -14,13 +14,13 @@ different firewall interfaces — the signature of asymmetric routing.
 
 | time | src | sport | dst | dport | egress-if | nat-src |
 |------|-----|-------|-----|-------|-----------|---------|
-| 09:12:01.114 | 10.0.1.77 | 54211 | 192.0.2.44 | 443 | ethernet0/4 (untrust) | 203.0.113.10 |
+| 09:12:01.114 | 10.0.1.77 | 54211 | 192.0.2.44 | 443 | ethernet1/3 (untrust) | 203.0.113.10 |
 
 ### Return leg — captured on `untrust2` (ISP-B, 198.51.100.0/28), same 5-tuple
 
 | time | src | sport | dst | dport | ingress-if | matched-session |
 |------|-----|-------|-----|-------|------------|-----------------|
-| 09:12:01.298 | 192.0.2.44 | 443 | 203.0.113.10 | 54211 | ethernet0/5 (untrust2) | **none — dropped (asymmetric path)** |
+| 09:12:01.298 | 192.0.2.44 | 443 | 203.0.113.10 | 54211 | ethernet1/4 (untrust2) | **none — dropped (asymmetric path)** |
 
 The SYN-ACK for a session that egressed via ISP-A arrived back via ISP-B.
 PAN-OS has no session record on `untrust2` for this 5-tuple (the session
@@ -44,13 +44,13 @@ dropped — correct stateful behavior, given the routing that produced it.
 
 | time | src | sport | dst | dport | egress-if | nat-src |
 |------|-----|-------|-----|-------|-----------|---------|
-| 11:40:02.001 | 10.0.1.77 | 55810 | 192.0.2.44 | 443 | ethernet0/4 (untrust) | 203.0.113.10 |
+| 11:40:02.001 | 10.0.1.77 | 55810 | 192.0.2.44 | 443 | ethernet1/3 (untrust) | 203.0.113.10 |
 
 ### Return leg — now also `untrust` (ISP-A), matching the session
 
 | time | src | sport | dst | dport | ingress-if | matched-session |
 |------|-----|-------|-----|-------|------------|-----------------|
-| 11:40:02.183 | 192.0.2.44 | 443 | 203.0.113.10 | 55810 | ethernet0/4 (untrust) | 1104822 (ACTIVE) |
+| 11:40:02.183 | 192.0.2.44 | 443 | 203.0.113.10 | 55810 | ethernet1/3 (untrust) | 1104822 (ACTIVE) |
 
 ### Drop counter, 2-hour soak post-fix
 

@@ -82,8 +82,8 @@ matched it, and being higher in the rule list, it won.
 **NAT rule shadowing caused by an overly broad, reused address object.**
 `Internet-to-WebServer-DNAT` used a `/24` destination object
 (`Public-IP-Pool`) instead of the single host it actually needed, and sat
-above `Internet-to-NewApp-DNAT` in the rule list. Because NAT evaluation is
-first-match top-to-bottom, the broad rule always matched before the
+above `Internet-to-NewApp-DNAT` in the rule list. Because NAT policy matching is
+first-match, top-to-bottom, the broad rule always matched before the
 specific one had a chance to. This was not a bug in the new rule — it was
 a pre-existing latent risk in the old rule that only surfaced once a new
 public IP was added inside its range.

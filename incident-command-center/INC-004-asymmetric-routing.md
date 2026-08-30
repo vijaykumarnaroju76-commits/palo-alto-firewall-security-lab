@@ -120,7 +120,7 @@ Network > Policy-Based Forwarding > Add
 Name: Pin-Egress-Path
 Source Zone: trust
 Destination: <partner-api-subnet>
-Egress Interface: ethernet0/4 (untrust / ISP-A)
+Egress Interface: ethernet1/3 (untrust / ISP-A)
 Enforce Symmetric Return: yes
 ```
 

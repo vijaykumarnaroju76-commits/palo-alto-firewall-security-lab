@@ -15,9 +15,10 @@ from symptom to root cause to validated fix.
 ## Incident Command Center
 
 Every incident here follows the same diagnostic path — because on a
-PAN-OS firewall, that path *is* the architecture. NAT is evaluated before
-routing. Security policy depends on an App-ID classification that can
-change mid-session. A tunnel that's "up" might only be half up. Walking
+PAN-OS firewall, that path *is* the architecture. An initial route lookup helps determine the destination zone used for
+NAT policy matching, while Security policy evaluates the original IP
+addresses with post-NAT zones. App-ID classification can also change
+as a session develops. A tunnel that's "up" might only be half up. Walking
 this sequence in order is what actually finds the root cause, not
 guessing from the symptom.
 

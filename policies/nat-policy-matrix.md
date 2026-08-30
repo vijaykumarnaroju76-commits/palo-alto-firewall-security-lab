@@ -11,8 +11,8 @@ here is not cosmetic; it is the actual cause of
 | # | Name | From → To | Source | Destination | Service | Translation | Notes |
 |---|------|-----------|--------|-------------|---------|-------------|-------|
 | 1 | `VPN-Bypass-NAT` | trust → vpn | Internal-Subnet, New-Dept-Subnet | Partner-Remote-Subnet | any | None (no translation) | Must stay above every generic outbound NAT rule or VPN traffic gets translated before the security engine ever considers it a tunnel candidate |
-| 2 | `Internet-to-WebServer-DNAT` | untrust → dmz | any | Public-IP-WebServer (203.0.113.50/32) | tcp/80, tcp/443 | Destination → 10.0.2.10 | Narrowed from the old `Public-IP-Pool` object after INC-001 |
-| 3 | `Internet-to-NewApp-DNAT` | untrust → dmz | any | Public-IP-NewApp (203.0.113.51/32) | tcp/443 | Destination → 10.0.2.20 | The rule that was silently shadowed pre-fix; now matches because its destination object no longer overlaps rule 2 |
+| 2 | `Internet-to-WebServer-DNAT` | untrust → untrust | any | Public-IP-WebServer (203.0.113.50/32) | tcp/80, tcp/443 | Destination → 10.0.2.10 | Narrowed from the old `Public-IP-Pool` object after INC-001 |
+| 3 | `Internet-to-NewApp-DNAT` | untrust → untrust | any | Public-IP-NewApp (203.0.113.51/32) | tcp/443 | Destination → 10.0.2.20 | The rule that was silently shadowed pre-fix; now matches because its destination object no longer overlaps rule 2 |
 | 4 | `Internal-to-Internet-SNAT` | trust → untrust | Internal-Subnet | any | any | Source → dynamic-ip-and-port, 203.0.113.10 | Primary ISP egress |
 | 5 | `Internal-to-Internet-SNAT-ISP2` | trust → untrust2 | Internal-Subnet | any | any | Source → dynamic-ip-and-port, 198.51.100.10 | Secondary ISP egress added for redundancy; see [INC-004](../incident-command-center/INC-004-asymmetric-routing.md) for why this rule alone isn't sufficient for symmetric return traffic |
 

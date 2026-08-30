@@ -30,10 +30,11 @@
 
 ```
 Configure IP:
-eth0/1: 192.168.1.1/24 (Management)
-eth0/2: 10.0.1.1/24 (Trust Zone)
-eth0/3: 10.0.2.1/24 (DMZ)
-eth0/4: 10.0.3.1/24 (Untrust)
+Management: 192.168.1.1/24 (dedicated management interface)
+ethernet1/1: 10.0.1.1/24 (Trust Zone)
+ethernet1/2: 10.0.2.1/24 (DMZ)
+ethernet1/3: 203.0.113.2/28 (Untrust / ISP-A)
+ethernet1/4: 198.51.100.2/28 (Untrust2 / ISP-B)
 ```
 
 ### Step 4: Web UI Access
@@ -65,7 +66,7 @@ device > administrators > Add admin user
 
 ```
 device > setup > NTP > Add
-- Server: 8.8.8.8
+- Server: pool.ntp.org
 - Enable
 ```
 
@@ -79,7 +80,7 @@ device > setup > NTP > Add
 Network > Zones > Add
 Name: trust
 Type: Layer3
-Include Interface: ethernet0/2
+Include Interface: ethernet1/1
 ```
 
 #### DMZ Zone
@@ -88,7 +89,7 @@ Include Interface: ethernet0/2
 Network > Zones > Add
 Name: dmz
 Type: Layer3
-Include Interface: ethernet0/3
+Include Interface: ethernet1/2
 ```
 
 #### Untrust Zone
@@ -97,29 +98,43 @@ Include Interface: ethernet0/3
 Network > Zones > Add
 Name: untrust
 Type: Layer3
-Include Interface: ethernet0/4
+Include Interface: ethernet1/3
+```
+
+#### Untrust2 Zone
+
+```
+Network > Zones > Add
+Name: untrust2
+Type: Layer3
+Include Interface: ethernet1/4
 ```
 
 ### Configure IP Addresses
 
 ```
+Dedicated Management interface:
+- IP: 192.168.1.1/24
+- Configured separately from dataplane Ethernet interfaces
+- Security zone: none
+
 Network > Interfaces > Ethernet
 
-Ethernet 0/1 (Management):
-- IP: 192.168.1.1/24
-- Zone: management
-
-Ethernet 0/2 (Trust):
+ethernet1/1 (Trust):
 - IP: 10.0.1.1/24
 - Zone: trust
 
-Ethernet 0/3 (DMZ):
+ethernet1/2 (DMZ):
 - IP: 10.0.2.1/24
 - Zone: dmz
 
-Ethernet 0/4 (Untrust):
-- IP: 10.0.3.1/24
+ethernet1/3 (Untrust / ISP-A):
+- IP: 203.0.113.2/28
 - Zone: untrust
+
+ethernet1/4 (Untrust2 / ISP-B):
+- IP: 198.51.100.2/28
+- Zone: untrust2
 ```
 
 ## Phase 4: Address & Service Objects
