@@ -12,6 +12,19 @@ below. The rest of the repository is organized around **incidents**: real
 operational failure patterns on a Palo Alto firewall, each one investigated
 from symptom to root cause to validated fix.
 
+## Run the offline validation demo
+
+```bash
+python3 automation/validate_incidents.py
+python3 automation/demo.py
+python3 -m unittest discover -s tests -v
+```
+
+Run from the repository root with Python 3.9+. No additional packages are needed.
+The report checks all six synthetic incident records; the demo injects failures
+into in-memory copies and verifies detection and recovery. It does not connect
+to a firewall. See [the offline validation guide](docs/offline-validation.md).
+
 ## Incident Command Center
 
 Every incident here follows the same diagnostic path — because on a

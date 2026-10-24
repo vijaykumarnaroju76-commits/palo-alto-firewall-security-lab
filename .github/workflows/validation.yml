@@ -52,3 +52,18 @@ jobs:
         run: pip install yamllint
       - name: Lint YAML files
         run: yamllint -c .yamllint.yml .github/workflows
+
+  incident-evidence:
+    name: Incident evidence and regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - name: Run regression tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Validate bundled incident evidence
+        run: python3 automation/validate_incidents.py
+      - name: Run synthetic failure demo
+        run: python3 automation/demo.py
