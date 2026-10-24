@@ -1,0 +1,21 @@
+test_cli_exit_and_report (test_incidents.IncidentTests.test_cli_exit_and_report) ... ok
+test_contradiction_detected (test_incidents.IncidentTests.test_contradiction_detected) ... ok
+test_duplicate_check (test_incidents.IncidentTests.test_duplicate_check) ... ok
+test_empty_checks (test_incidents.IncidentTests.test_empty_checks) ... ok
+test_empty_directory (test_incidents.IncidentTests.test_empty_directory) ... ok
+test_empty_stages (test_incidents.IncidentTests.test_empty_stages) ... ok
+test_failed_postfix (test_incidents.IncidentTests.test_failed_postfix) ... ok
+test_filename_mismatch (test_incidents.IncidentTests.test_filename_mismatch) ... ok
+test_honest_failed_checklist (test_incidents.IncidentTests.test_honest_failed_checklist) ... ok
+test_invalid_json (test_incidents.IncidentTests.test_invalid_json) ... ok
+test_malformed_input (test_incidents.IncidentTests.test_malformed_input) ... ok
+test_missing_required_field (test_incidents.IncidentTests.test_missing_required_field) ... ok
+test_mixed_formats (test_incidents.IncidentTests.test_mixed_formats) ... ok
+test_six_bundled_records (test_incidents.IncidentTests.test_six_bundled_records) ... ok
+test_synthetic_label_required (test_incidents.IncidentTests.test_synthetic_label_required) ... ok
+test_unknown_result (test_incidents.IncidentTests.test_unknown_result) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.061s
+
+OK
